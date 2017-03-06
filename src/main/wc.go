@@ -4,8 +4,14 @@ import (
 	"fmt"
 	"mapreduce"
 	"os"
+    "strings"
+    "unicode"
+    "strconv"
 )
 
+func spliter(ch rune) bool {
+    return !(unicode.IsLetter(ch) || unicode.IsNumber(ch))
+}
 //
 // The map function is called once for each file of input. The first
 // argument is the name of the input file, and the second is the
@@ -15,6 +21,12 @@ import (
 //
 func mapF(filename string, contents string) []mapreduce.KeyValue {
 	// TODO: you have to write this function
+    fields := strings.FieldsFunc(contents, spliter)
+    var kvs []mapreduce.KeyValue
+    for _,field := range fields {
+        kvs = append(kvs, mapreduce.KeyValue{field, "1"})
+    }
+    return kvs
 }
 
 //
@@ -24,6 +36,13 @@ func mapF(filename string, contents string) []mapreduce.KeyValue {
 //
 func reduceF(key string, values []string) string {
 	// TODO: you also have to write this function
+    var result uint64 = 0
+    for _, value := range values {
+        if val,err := strconv.ParseUint(value, 10, 64); err == nil {
+            result += val
+        }
+    }
+    return strconv.FormatUint(result, 10)
 }
 
 // Can be run in 3 ways:
