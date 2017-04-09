@@ -4,6 +4,7 @@ import (
     "io"
     "os"
     "encoding/json"
+    "log"
 )
 
 // doReduce manages one reduce task: it reads the intermediate
@@ -23,7 +24,7 @@ func doReduce(
         reduceFileName := reduceName(jobName, i, reduceTaskNumber)
         file, err := os.Open(reduceFileName)
         if err != nil {
-            panic(err)
+            log.Fatalf("Open %s err:%s", reduceFileName, err)
         }
         defer file.Close()
         var kv KeyValue
@@ -33,7 +34,8 @@ func doReduce(
                 if err == io.EOF {
                     break
                 } else {
-                    panic(err)
+                    // panic(err)
+                    log.Fatalf("Decode %s failed err:%s", kv, err)
                 }
             }
             mapReduceKeyValues[kv.Key] = append(mapReduceKeyValues[kv.Key], kv.Value)
@@ -43,7 +45,8 @@ func doReduce(
     mergeFileName := mergeName(jobName, reduceTaskNumber)
     file, err := os.OpenFile(mergeFileName, os.O_RDWR|os.O_CREATE, 0644)
     if err != nil {
-        panic(err)
+        // panic(err)
+        log.Fatalf("OpenFile %s failed err:%s", mergeFileName, err)
     }
     defer file.Close()
     enc := json.NewEncoder(file)
@@ -52,7 +55,8 @@ func doReduce(
 	    // reduceF func(key string, values []string) string,
         curReduceResult = reduceF(reduceKey, reduceValue)
         if err = enc.Encode(&KeyValue{reduceKey, curReduceResult}); err != nil {
-            panic(err)
+            // panic(err)
+            log.Fatalf("Encode key:%s value:%s failed err:%s", reduceKey, curReduceResult, err)
         }
     }
 

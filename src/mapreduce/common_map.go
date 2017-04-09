@@ -5,6 +5,7 @@ import (
     "io/ioutil"
     "os"
     "encoding/json"
+    "log"
 //  "fmt"
 )
 
@@ -22,36 +23,35 @@ func doMap(
     // var byteContents []byte
     file, err := os.Open(inFile)
     if err != nil {
-        panic(err)
+        // panic(err)
+        log.Fatalf("Open %s err:%s", inFile, err)
     }
     defer file.Close()
     byteContents, err := ioutil.ReadAll(file)
     if err != nil {
-        panic(err)
+        // panic(err)
+        log.Fatalf("ReadAll %s err:%s", inFile, err)
     }
     contents := string(byteContents)
     kvs = mapF(inFile, contents)
-    var mapReduceTask int
-    var reduceFileName string
-    var mapReduceFile map[string]*os.File
-    var outFile *os.File
-    mapReduceFile = make(map[string]*os.File)
-    for _, kv := range kvs {
-        // fmt.Printf("%s %s", kv.Key, kv.Value)
-        mapReduceTask = ihash(kv.Key)%nReduce
-        reduceFileName = reduceName(jobName, mapTaskNumber, mapReduceTask)
-        if outFile, ok := mapReduceFile[reduceFileName]; !ok {
-            if outFile,err  = os.OpenFile(reduceFileName, os.O_RDWR|os.O_CREATE, 0644); err != nil {
-                panic(err)
-            }
-            mapReduceFile[reduceFileName] = outFile
-            defer outFile.Close()
+    for i := 0; i < nReduce; i++ {
+        reduceFileName := reduceName(jobName, mapTaskNumber, i)
+        var outFile *os.File
+        if outFile,err = os.OpenFile(reduceFileName, os.O_RDWR|os.O_CREATE, 0644); err != nil {
+            log.Fatalf("OpenFile %s err:%s", reduceFileName, err)
         }
+        defer outFile.Close()
         enc := json.NewEncoder(outFile)
-        if err := enc.Encode(&kv); err != nil {
-            panic(err)
+        for _, kv := range kvs {
+            iIndex := ihash(kv.Key)%nReduce
+            if  i == iIndex {
+                if err := enc.Encode(&kv); err != nil {
+                    log.Fatalf("Encode kv:%s failed! err:%s", kv, err)
+                }
+            }
         }
     }
+
 	//
 	// You will need to write this function.
 	//
